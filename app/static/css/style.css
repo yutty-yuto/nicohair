@@ -91,3 +91,14 @@ main {
 .form-label-group input {
   border-radius: 2rem;
 }
+
+.stafflist img {
+  height: 250px;
+  object-fit: contain;
+}
+
+/* calendar */
+.calendar img {
+  height: 150px;
+  object-fit: contain;
+}
