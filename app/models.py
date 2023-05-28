@@ -16,10 +16,12 @@ class Booking(models.Model):
   last_name = models.CharField('名', max_length=100, null=True, blank=True)
   tel = models.CharField('電話番号', max_length=100, null=True, blank=True)
   remarks = models.TextField('備考', default="", blank=True)
-  start = models.DateTimeField('開始時間', default=timedelta(days=1))
-  end = models.DateTimeField('終了時間', default=timedelta(days=1))
+  start = models.DateTimeField('開始時間', default=timezone.now)
+  end = models.DateTimeField('終了時間', default=timezone.now)
+  # start = models.DateTimeField('開始時間', default=timedelta(days=1))
+  # end = models.DateTimeField('終了時間', default=timedelta(days=1))
 
   def __str__(self):
-    start = timezone.localtime(self.start).strtime('%Y/%m/%d %H:%M')
+    start = timezone.localtime(self.start).strftime('%Y/%m/%d %H:%M')
     end = timezone.localtime(self.end).strftime('%Y/%m/%d %H:%M')
     return f'{self.first_name}{self.last_name} {start} ~ {end} {self.staff}'

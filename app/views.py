@@ -41,24 +41,27 @@ class CalendarView(View):
         start_day = days[0]
         end_day = days[-1]
 
-        calender = {}
+        calendar = {}
         # 9時〜18時
         for hour in range(9, 19):
             row = {}
             for day in days:
                 row[day] = True
             calendar[hour] = row
-        
+
+
         start_time = make_aware(datetime.combine(start_day, time(hour=9, minute=0, second=0)))
-        end_time = make_aware(datetime.combine(end_day, time(hour=9, minute=0, second=0)))
-        booking_data = Booking.objects.filter(staff=staff_data).exclude(Q(start__gt=end_time) | Q(end__lt=start_time))
+        end_time = make_aware(datetime.combine(end_day, time(hour=19, minute=0, second=0)))
+        booking_data = Booking.objects.filter(staff=staff_data[0]).exclude(Q(start__gt=end_time) | Q(end__lt=start_time))
+        staff_data = staff_data[0]
         for booking in booking_data:
             local_time = localtime(booking.start)
             booking_date = local_time.date()
             booking_hour = local_time.hour
             if (booking_hour in calendar) and (booking_date in calendar[booking_hour]):
                 calendar[booking_hour][booking_date] = False
-
+                print("■■■■■■■■■■■■■■■")
+                print("calendar.items: " + str(calendar.items))
         return render(request, 'app/calendar.html', {
             'staff_data': staff_data,
             'calendar': calendar,
