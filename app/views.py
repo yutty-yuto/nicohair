@@ -9,21 +9,27 @@ from app.forms import BookingForm
 from django.views.decorators.http import require_POST
 
 class IndexView(LoginRequiredMixin, TemplateView):
-    print("■■■■■■■■①")
     template_name = 'app/index.html'
     login_url = '/accounts/login/'
-    print("■■■■■■■■②")
+
     # 以下のメソッドはトップページにスタッフリストを表示させるため、一時的に記述
     def get(self, request, *args, **kwargs):
-        print("■■■■■■■■③")
-        if request.user.is_authenticated:
-            print("■■■■■■■■④")
+        print("◆◆◆◆◆◆③")
+        # if request.user.is_authenticated:
+        if request.user.is_authenticated and Staff.objects.filter(user_id=request.user.id).select_related('user').exists():
+            print("■■■■■■■■■■A")
             start_date = date.today()
             weekday = start_date.weekday()
             # カレンダ日曜日開始
             if weekday != 6:
                 start_date = start_date - timedelta(weekday + 1)
             return redirect('mypage', start_date.year, start_date.month, start_date.day)
+        else:
+            print("■■■■■■■■■■B")
+            staff_data = Staff.objects.all
+            return render(request, 'app/index.html', {
+            'staff_data': staff_data,
+            })
         staff_data = Staff.objects.all
         return render(request, 'app/index.html', {
             'staff_data': staff_data,
@@ -31,6 +37,14 @@ class IndexView(LoginRequiredMixin, TemplateView):
         
 class StaffView(View):
     def get(self, request, *args, **kwargs):
+        # if request.user.is_authenticated:
+        #     start_date = date.today()
+        #     weekday = start_date.weekday()
+        #     # カレンダ日曜日開始
+        #     if weekday != 6:
+        #         start_date = start_date - timedelta(days=weekday + 1)
+        #     return redirect('mypage', start_date.year, start_date.month, start_date.day)
+
         staff_data = get_object_or_404(Staff.objects.all)
 
         return render(request, 'app/staff.html', {
@@ -127,60 +141,63 @@ class BookingView(View):
                 booking.remarks = form.cleaned_data['remarks']
                 booking.save()
                 return redirect('thanks')
-        
 
 class ThanksView(TemplateView):
     def get(self, request, *args, **kwargs):
         return render(request, 'app/thanks.html')
 
 class MyPageView(LoginRequiredMixin, View):
-    print("■■■■■■■■⑤")
     def get(self, request, *args, **kwargs):
-        print("■■■■■■■■⑥")
-        print(request.user.id)# → 5 was output
-        staff_data = Staff.objects.filter(id=request.user.id).select_related('user')[0]
-        print("■■■■■■■■⑦")
-        year = self.kwargs.get('year')
-        month = self.kwargs.get('month')
-        day = self.kwargs.get('day')
-        start_date = date(year=year, month=month, day=day)
-        days = [start_date + timedelta(days=day) for day in range(7)]
-        start_day = days[0]
-        end_day = days[-1]
+        # if not Staff.objects.filter(id=request.user.id).select_related('user')[0].exists():
+        if not Staff.objects.filter(user_id=request.user.id).select_related('user').exists():
+            print("◆◆◆◆◆◆◆①")
+            response = redirect('index')
+            print("◆◆◆◆◆◆◆②")
+            return response
+        else:
+            print(request.user.id)# → 5 was output
+            staff_data = Staff.objects.filter(user_id=request.user.id).select_related('user')[0]
+            year = self.kwargs.get('year')
+            month = self.kwargs.get('month')
+            day = self.kwargs.get('day')
+            start_date = date(year=year, month=month, day=day)
+            days = [start_date + timedelta(days=day) for day in range(7)]
+            start_day = days[0]
+            end_day = days[-1]
 
-        calendar = {}
-        # 10時～20時
-        for hour in range(10, 21):
-            row = {}
-            for day_ in days:
-                row[day_] = ""
-            calendar[hour] = row
-        start_time = make_aware(datetime.combine(start_day, time(hour=10, minute=0, second=0)))
-        end_time = make_aware(datetime.combine(end_day, time(hour=20, minute=0, second=0)))
-        booking_data = Booking.objects.filter(staff=staff_data).exclude(Q(start__gt=end_time) | Q(end__lt=start_time))
-        for booking in booking_data:
-            local_time = localtime(booking.start)
-            booking_date = local_time.date()
-            booking_hour = local_time.hour
-            if (booking_hour in calendar) and (booking_date in calendar[booking_hour]):
-                calendar[booking_hour][booking_date] = booking.first_name
-        return render(request, 'app/mypage.html', {
-            'staff_data': staff_data,
-            'booking_data': booking_data,
-            'calendar': calendar,
-            'days': days,
-            'start_day': start_day,
-            'end_day': end_day,
-            'before': days[0] - timedelta(days=7),
-            'next': days[-1] + timedelta(days=1),
-            'year': year,
-            'month': month,
-            'day': day,
-        })
+            calendar = {}
+            # 10時～20時
+            for hour in range(10, 21):
+                row = {}
+                for day_ in days:
+                    row[day_] = ""
+                calendar[hour] = row
+            start_time = make_aware(datetime.combine(start_day, time(hour=10, minute=0, second=0)))
+            end_time = make_aware(datetime.combine(end_day, time(hour=20, minute=0, second=0)))
+            booking_data = Booking.objects.filter(staff=staff_data).exclude(Q(start__gt=end_time) | Q(end__lt=start_time))
+            for booking in booking_data:
+                local_time = localtime(booking.start)
+                booking_date = local_time.date()
+                booking_hour = local_time.hour
+                if (booking_hour in calendar) and (booking_date in calendar[booking_hour]):
+                    calendar[booking_hour][booking_date] = booking.first_name
+            return render(request, 'app/mypage.html', {
+                'staff_data': staff_data,
+                'booking_data': booking_data,
+                'calendar': calendar,
+                'days': days,
+                'start_day': start_day,
+                'end_day': end_day,
+                'before': days[0] - timedelta(days=7),
+                'next': days[-1] + timedelta(days=1),
+                'year': year,
+                'month': month,
+                'day': day,
+            })
 
 @require_POST
 def Holiday(request, year, month, day, hour):
-    staff_data = Staff.objects.get(id=request.user.id)
+    staff_data = Staff.objects.get(user_id=request.user.id)
     start_time = make_aware(datetime(year=year, month=month, day=day, hour=hour))
     end_time = make_aware(datetime(year=year, month=month, day=day, hour=hour + 1))
 

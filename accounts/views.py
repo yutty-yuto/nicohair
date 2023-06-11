@@ -2,15 +2,40 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from accounts.models import CustomUser
+from accounts.forms import ProfileForm
+from app.models import Staff, Booking
+from django.utils import timezone
 from accounts.forms import ProfileForm, SignupUserForm
 from allauth.account import views
 
+class SignupView(views.SignupView):
+    template_name = 'accounts/signup.html'
+    # サインアップにオリジナルのフォーム(forms.pyで指定したclassのフォーム)を使用するように指定
+    form_class = SignupUserForm
+    # redirect('accounts/profile/') # 20230611 野崎追加
+class LoginView(views.LoginView):
+    template_name = 'accounts/login.html'
+
+class LogoutView(views.LogoutView):
+    template_name = 'accounts/logout.html'
+
+    def post(self, *args, **kwargs):
+        if self.request.user.is_authenticated:
+            self.logout()
+        return redirect('/')
+
 class ProfileView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        # CustomUserクラスからログイン中のユーザ情報を取得
         user_data = CustomUser.objects.get(id=request.user.id)
-        return render(request, 'accounts/profile.html',{
+        # print("◆◆◆◆◆◆◆")
+        # print(user_data)
+        # print("◆◆◆◆◆◆◆")
+        # staff_data = Staff.objects.get(user_id=user_data)
+        # booking_data = Booking.objects.filter(staff=staff_data, start__gte=timezone.now())
+        return render(request, 'accounts/profile.html', {
             'user_data': user_data,
+            # 'staff_data': staff_data,
+            # 'booking_data': booking_data,
         })
     
 class ProfileEditView(LoginRequiredMixin, View):
@@ -28,7 +53,8 @@ class ProfileEditView(LoginRequiredMixin, View):
         )
 
         return render(request, 'accounts/profile_edit.html', {
-            'form': form
+            'form': form,
+            'user_data': user_data
         })
     
     def post(self, request, *args, **kwargs):
@@ -48,20 +74,11 @@ class ProfileEditView(LoginRequiredMixin, View):
             'form': form
         })
     
-class LoginView(views.LoginView):
-    template_name = 'accounts/login.html'
 
-class LogoutView(views.LogoutView):
-    template_name = 'accounts/logout.html'
 
-    def post(self, *args, **kwargs):
-        if self.request.user.is_authenticated:
-            self.logout()
-        return redirect('/')
+
     
-class SignupView(views.SignupView):
-    template_name = 'accounts/signup.html'
-    form_class = SignupUserForm
+
 
 
 
